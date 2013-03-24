@@ -1,5 +1,7 @@
 package com.android.systemui.quicksettings;
 
+import static com.android.internal.util.cm.QSUtils.getTileTextColor;
+
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.drawable.Drawable;
@@ -78,6 +80,7 @@ public class BatteryTile extends QuickSettingsTile implements BatteryStateChange
         TextView tv = (TextView) mTile.findViewById(R.id.text);
         ImageView iv = (ImageView) mTile.findViewById(R.id.image);
         tv.setText(mLabel);
+        tv.setTextColor(getTileTextColor(mContext));
         iv.setImageDrawable(batteryIcon);
         iv.setImageLevel(batteryLevel);
     }
