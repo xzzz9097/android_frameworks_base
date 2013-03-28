@@ -16,8 +16,6 @@
 
 package com.android.systemui.statusbar.phone;
 
-import static com.android.internal.util.cm.QSUtils.setBackgroundStyle;
-
 import android.content.Context;
 import android.graphics.Color;
 import android.provider.Settings;
@@ -40,8 +38,6 @@ public class QuickSettingsTileView extends FrameLayout {
 
         mColSpan = 1;
         mRowSpan = 1;
-
-        setBackgroundStyle(context, this);
     }
 
     void setColumnSpan(int span) {
