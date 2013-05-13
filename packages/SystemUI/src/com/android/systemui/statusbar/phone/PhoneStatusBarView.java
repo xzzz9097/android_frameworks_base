@@ -244,8 +244,10 @@ public class PhoneStatusBarView extends PanelBar {
         }
 
         updateShortcutsVisibility();
-   
-public void updateShortcutsVisibility() {
+
+    }
+
+    public void updateShortcutsVisibility() {
         // Notification Shortcuts check for fully expanded panel
         if (mBar.mSettingsButton == null || mBar.mNotificationButton == null) {
             // Tablet
@@ -264,6 +266,6 @@ public void updateShortcutsVisibility() {
                 mBar.updateNotificationShortcutsVisibility(false);
             }
         }
-        mBar.updateCarrierAndWifiLabelVisibility(false);
+//        mBar.updateCarrierAndWifiLabelVisibility(false);
     }
 }
