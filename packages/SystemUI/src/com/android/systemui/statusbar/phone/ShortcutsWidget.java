@@ -465,7 +465,7 @@ public class ShortcutsWidget extends LinearLayout {
                                 }
                                 try {
                                     Intent i = in;
-                                    i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                                    i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_FLOATING_WINDOW);
                                     v.getContext().startActivity(i);
                                 } catch (Exception e) {
                                 }
@@ -493,7 +493,7 @@ public class ShortcutsWidget extends LinearLayout {
             try {
                 Intent i = new Intent("android.settings.slim.notificationshortcuts.NOTIFICATION_SHORTCUTS");
                 i.addCategory(Intent.CATEGORY_DEFAULT);
-                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_FLOATING_WINDOW);
                 v.getContext().startActivity(i);
             } catch (Exception e) {
             }
