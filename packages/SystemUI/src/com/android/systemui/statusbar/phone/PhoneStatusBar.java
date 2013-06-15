@@ -102,6 +102,7 @@ import com.android.systemui.statusbar.phone.ShortcutsWidget;
 import com.android.systemui.statusbar.policy.BatteryController;
 import com.android.systemui.statusbar.policy.BluetoothController;
 import com.android.systemui.statusbar.policy.Clock;
+import com.android.systemui.statusbar.policy.ClockCenter;
 import com.android.systemui.statusbar.policy.DockBatteryController;
 import com.android.systemui.statusbar.policy.DateView;
 import com.android.systemui.statusbar.policy.IntruderAlertView;
@@ -192,6 +193,8 @@ public class PhoneStatusBar extends BaseStatusBar {
     // right-hand icons
     LinearLayout mSystemIconArea;
 
+    // layout for center clock
+    LinearLayout mCenterClockLayout;
     // the icons themselves
     IconMerger mNotificationIcons;
     // [+>
@@ -468,6 +471,7 @@ class SettingsObserver extends ContentObserver {
         
         // status bar clock
         mClock = (Clock) mStatusBarView.findViewById(R.id.clock);
+        mCClock = (ClockCenter) mStatusBarView.findViewById(R.id.center_clock);
 
         PanelHolder holder = (PanelHolder) mStatusBarWindow.findViewById(R.id.panel_holder);
         mStatusBarView.setPanelHolder(holder);
@@ -527,6 +531,7 @@ class SettingsObserver extends ContentObserver {
         mNotificationIcons = (IconMerger)mStatusBarView.findViewById(R.id.notificationIcons);
         mNotificationIcons.setOverflowIndicator(mMoreIcon);
         mStatusBarContents = (LinearLayout)mStatusBarView.findViewById(R.id.status_bar_contents);
+        mCenterClockLayout = (LinearLayout)mStatusBarView.findViewById(R.id.center_clock_layout);
         mTickerView = mStatusBarView.findViewById(R.id.ticker);
 
         mPile = (NotificationRowLayout)mStatusBarWindow.findViewById(R.id.latestItems);
@@ -2137,7 +2142,8 @@ protected void updateNotificationShortcutsVisibility(boolean vis) {
                     ObjectAnimator.ofFloat(systemIcons, View.ALPHA, 0),
                     ObjectAnimator.ofFloat(signal, View.ALPHA, 0),
                     ObjectAnimator.ofFloat(battery, View.ALPHA, 0.5f),
-                    ObjectAnimator.ofFloat(mClock, View.ALPHA, 0.5f)
+                    ObjectAnimator.ofFloat(mClock, View.ALPHA, 0.5f),
+                    ObjectAnimator.ofFloat(mCClock, View.ALPHA, 0.5f)
                 );
             lightsOutAnim.setDuration(750);
 
@@ -2147,7 +2153,8 @@ protected void updateNotificationShortcutsVisibility(boolean vis) {
                     ObjectAnimator.ofFloat(systemIcons, View.ALPHA, 1),
                     ObjectAnimator.ofFloat(signal, View.ALPHA, 1),
                     ObjectAnimator.ofFloat(battery, View.ALPHA, 1),
-                    ObjectAnimator.ofFloat(mClock, View.ALPHA, 1)
+                    ObjectAnimator.ofFloat(mClock, View.ALPHA, 1),
+                    ObjectAnimator.ofFloat(mCClock, View.ALPHA, 1)
                 );
             lightsOnAnim.setDuration(250);
 
@@ -2246,9 +2253,11 @@ protected void updateNotificationShortcutsVisibility(boolean vis) {
             mTicking = true;
             if (!mHaloActive) {
                 mStatusBarContents.setVisibility(View.GONE);
+            	mCenterClockLayout.setVisibility(View.GONE);
                 mTickerView.setVisibility(View.VISIBLE);
                 mTickerView.startAnimation(loadAnim(com.android.internal.R.anim.push_up_in, null));
                 mStatusBarContents.startAnimation(loadAnim(com.android.internal.R.anim.push_up_out, null));
+            	mCenterClockLayout.startAnimation(loadAnim(com.android.internal.R.anim.push_up_out, null));
             }
         }
 
@@ -2256,18 +2265,22 @@ protected void updateNotificationShortcutsVisibility(boolean vis) {
         public void tickerDone() {
             if (!mHaloActive) {
                 mStatusBarContents.setVisibility(View.VISIBLE);
+	            mCenterClockLayout.setVisibility(View.VISIBLE);
                 mTickerView.setVisibility(View.GONE);
                 mStatusBarContents.startAnimation(loadAnim(com.android.internal.R.anim.push_down_in, null));
                 mTickerView.startAnimation(loadAnim(com.android.internal.R.anim.push_down_out,
                             mTickingDoneListener));
+	            mCenterClockLayout.startAnimation(loadAnim(com.android.internal.R.anim.push_down_in, null));
             }
         }
 
         public void tickerHalting() {
             if (!mHaloActive) {
                 mStatusBarContents.setVisibility(View.VISIBLE);
+	            mCenterClockLayout.setVisibility(View.VISIBLE);
                 mTickerView.setVisibility(View.GONE);
                 mStatusBarContents.startAnimation(loadAnim(com.android.internal.R.anim.fade_in, null));
+	            mCenterClockLayout.startAnimation(loadAnim(com.android.internal.R.anim.fade_in, null));
                 // we do not animate the ticker away at this point, just get rid of it (b/6992707)
             }
         }

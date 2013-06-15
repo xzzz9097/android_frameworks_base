@@ -2633,13 +2633,6 @@ public final class Settings {
         public static final String HALO_HIDE = "halo_hide";
 
         /**
-         * HALO pause activities?, defaults to 0 (no, do not pause) on devices which isLargeRAM() == true
-         * otherwise it defaults to 1 (yes, do pause)
-         * @hide
-         */
-        public static final String HALO_PAUSE = "halo_pause";
-
-        /**
          * Pie menu, should default to 1 (yes, show)
          * @hide
          */
@@ -2843,18 +2836,6 @@ public final class Settings {
          * @hide
          */
         public static final String MAX_NOTIFICATION_ICONS = "max_notification_icons";
-
-        /**
-         * Whether to show or not clock on statusbar
-         * @hide
-         */
-        public static final String STATUS_BAR_SHOW_CLOCK = "status_bar_show_clock";
-
-        /**
-         * AM/PM style on statusbar, either normal, small or gone.
-         * @hide
-         */
-        public static final String STATUS_BAR_AM_PM_STYLE = "status_bar_am_pm_style";
 
         /**	
          * Circle battery, default = 0, standard android battery
@@ -3126,6 +3107,53 @@ public final class Settings {
          */
 	public static final String VOLUME_KEYS_CONTROL_RING_STREAM = "volume_keys_control_ring_stream";
         
+
+        /**
+         * AM/PM Style for clock options
+         * 0 - Normal AM/PM
+         * 1 - Small AM/PM
+         * 2 - No AM/PM
+         * @hide
+         */
+        public static final String STATUSBAR_CLOCK_AM_PM_STYLE = "statusbar_clock_am_pm_style";
+
+        /**
+         * Style of clock
+         * 0 - Hide Clock
+         * 1 - Right Clock
+         * 2 - Center Clock
+         * @hide
+         */
+        public static final String STATUSBAR_CLOCK_STYLE = "statusbar_clock_style";
+
+        /**
+         * Setting for clock color
+         * @hide
+         */
+        public static final String STATUSBAR_CLOCK_COLOR = "statusbar_clock_color";
+
+        /**
+         * Shows weekday before clock time
+         * 0 - No Day
+         * 1 - Small Day
+         * 2 - Normal Day
+         * @hide
+         */
+        public static final String STATUSBAR_CLOCK_WEEKDAY = "statusbar_clock_weekday";
+
+        /**
+         * Show the pending notification counts as overlays on the statusbar
+         * @hide
+         */
+//        public static final String STATUSBAR_NOTIF_COUNT = "status_bar_notif_count";
+
+        /**
+         * Holds the text for the Carrier label. An empty string
+         * will bring the default text back.
+         * @hide
+         */
+        public static final String CUSTOM_CARRIER_LABEL = "custom_carrier_label";
+
 	/**
          * Settings to backup. This is here so that it's in the same place as the settings
          * keys and easy to update.

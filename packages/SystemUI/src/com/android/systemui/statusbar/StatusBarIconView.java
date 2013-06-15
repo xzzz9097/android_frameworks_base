@@ -370,5 +370,4 @@ public class StatusBarIconView extends AnimatedImageView {
             }
         }
     }
-
 }

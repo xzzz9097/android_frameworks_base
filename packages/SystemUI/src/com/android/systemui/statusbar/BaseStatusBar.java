@@ -97,6 +97,7 @@ import com.android.systemui.statusbar.phone.QuickSettingsContainerView;
 import com.android.systemui.statusbar.phone.Ticker;
 import com.android.systemui.statusbar.policy.BatteryController;
 import com.android.systemui.statusbar.policy.Clock;
+import com.android.systemui.statusbar.policy.ClockCenter;
 import com.android.systemui.statusbar.policy.NetworkController;
 import com.android.systemui.statusbar.policy.NotificationRowLayout;
 import com.android.systemui.statusbar.tablet.StatusBarPanel;
@@ -172,6 +173,7 @@ public abstract class BaseStatusBar extends SystemUI implements
     public BatteryController mBatteryController;
     public SignalClusterView mSignalCluster;
     public Clock mClock;
+    public ClockCenter mCClock;
 
     // left-hand icons 
     public LinearLayout mStatusIcons;
@@ -705,6 +707,7 @@ public abstract class BaseStatusBar extends SystemUI implements
                 Settings.System.STATUS_ICON_COLOR);
         if (!colorInfo.lastColorString.equals(mLastIconColor.lastColorString)) {
             if(mClock != null) mClock.setTextColor(colorInfo.lastColor);
+            if(mCClock != null) mCClock.setTextColor(colorInfo.lastColor);
             if(mSignalCluster != null) mSignalCluster.setColor(colorInfo);
             if(mBatteryController != null) mBatteryController.setColor(colorInfo);
             if (mStatusIcons != null) {
@@ -854,10 +857,19 @@ public abstract class BaseStatusBar extends SystemUI implements
     }
 
     public void showClock(boolean show) {
-        if (mClock != null) {
+        boolean rightClock = (Settings.System.getInt(mContext.getContentResolver(),
+                Settings.System.STATUSBAR_CLOCK_STYLE, 1) == 1);
+        boolean centerClock = (Settings.System.getInt(mContext.getContentResolver(),
+                Settings.System.STATUSBAR_CLOCK_STYLE, 1) == 2);
+        if (rightClock && mClock != null) {
             boolean setting = (Settings.System.getInt(mContext.getContentResolver(),
-                    Settings.System.STATUS_BAR_SHOW_CLOCK, 1) == 1);
+                    Settings.System.STATUSBAR_CLOCK_STYLE, 1) == 1);
             mClock.setVisibility(show && setting ? View.VISIBLE : View.GONE);
+        }
+        if (centerClock && mCClock != null) {
+            boolean setting = (Settings.System.getInt(mContext.getContentResolver(),
+                    Settings.System.STATUSBAR_CLOCK_STYLE, 1) == 2);
+            mCClock.setVisibility(show && setting ? View.VISIBLE : View.GONE);
         }
     }
 
