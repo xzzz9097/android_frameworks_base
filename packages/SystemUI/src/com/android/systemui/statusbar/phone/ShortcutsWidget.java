@@ -465,7 +465,12 @@ public class ShortcutsWidget extends LinearLayout {
                                 }
                                 try {
                                     Intent i = in;
-                                    i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_FLOATING_WINDOW);
+									int enableMwShade = Settings.System.getInt(mContext.getContentResolver(), Settings.System.FLOATING_SHADE, 0);
+									if (enableMwShade==1) {
+                                    	i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_FLOATING_WINDOW);
+									} else {
+										i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+									}
                                     v.getContext().startActivity(i);
                                 } catch (Exception e) {
                                 }
@@ -493,7 +498,12 @@ public class ShortcutsWidget extends LinearLayout {
             try {
                 Intent i = new Intent("android.settings.slim.notificationshortcuts.NOTIFICATION_SHORTCUTS");
                 i.addCategory(Intent.CATEGORY_DEFAULT);
-                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_FLOATING_WINDOW);
+				int enableMwShade = Settings.System.getInt(mContext.getContentResolver(), Settings.System.FLOATING_SHADE, 0);
+				if (enableMwShade==1) {
+                	i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_FLOATING_WINDOW);
+				} else {
+					i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+				}
                 v.getContext().startActivity(i);
             } catch (Exception e) {
             }

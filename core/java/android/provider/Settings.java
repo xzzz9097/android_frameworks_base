@@ -2777,6 +2777,12 @@ public final class Settings {
         public static final String HALO_PAUSE = "halo_pause";
 
         /**
+         * Floating Shade, should default to 0 (disabled)
+         * @hide
+         */
+        public static final String FLOATING_SHADE = "floating_shade";
+
+        /**
          * Pie menu, should default to 1 (yes, show)
          * @hide
          */
