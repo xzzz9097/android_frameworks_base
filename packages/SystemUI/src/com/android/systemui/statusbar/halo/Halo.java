@@ -61,6 +61,7 @@ import android.os.ServiceManager;
 import android.provider.Settings;
 import android.util.AttributeSet;
 import android.util.DisplayMetrics;
+import android.util.ExtendedPropertiesUtils;
 import android.util.Log;
 import android.view.animation.Animation;
 import android.view.animation.Animation.AnimationListener;
@@ -101,8 +102,9 @@ import com.android.systemui.statusbar.StatusBarIconView;
 import com.android.systemui.statusbar.NotificationData;
 import com.android.systemui.statusbar.BaseStatusBar;
 import com.android.systemui.statusbar.phone.Ticker;
+import com.android.systemui.statusbar.tablet.TabletTicker;
 
-public class Halo extends FrameLayout implements Ticker.TickerCallback {
+public class Halo extends FrameLayout implements Ticker.TickerCallback, TabletTicker.TabletTickerCallback {
 
     public static final String TAG = "HaloLauncher";
 
@@ -388,9 +390,13 @@ public class Halo extends FrameLayout implements Ticker.TickerCallback {
 
     public void setStatusBar(BaseStatusBar bar) {
         mBar = bar;
-        if (mBar.getTicker() != null) mBar.getTicker().setUpdateEvent(this);
-        mNotificationData = mBar.getNotificationData();
-        loadLastNotification(true);
+        if(ExtendedPropertiesUtils.isTablet()) {
+            if (mBar.getTabletTicker() != null) mBar.getTabletTicker().setUpdateEvent(this);
+        } else {
+            if (mBar.getTicker() != null) mBar.getTicker().setUpdateEvent(this);
+        }
+            mNotificationData = mBar.getNotificationData();
+            loadLastNotification(true);
     }
 
     void launchTask(NotificationClicker intent) {
@@ -557,20 +563,22 @@ public class Halo extends FrameLayout implements Ticker.TickerCallback {
                     
                     mCurrentNotficationEntry = null;
                     if (mNotificationData.size() > 0) {
-                        if (mNotificationData.size() > 0) {
-                            for (int i = mNotificationData.size() - 1; i >= 0; i--) {
-                                NotificationData.Entry item = mNotificationData.get(i);
-                                if (!((item.notification.notification.flags &
-                                        Notification.FLAG_AUTO_CANCEL) == Notification.FLAG_AUTO_CANCEL)) {
-                                    tick(item, "", 0, 0);
-                                    break;
-                                }
+                        for (int i = mNotificationData.size() - 1; i >= 0; i--) {
+                            NotificationData.Entry item = mNotificationData.get(i);
+                            if (!((item.notification.notification.flags &
+                                    Notification.FLAG_AUTO_CANCEL) == Notification.FLAG_AUTO_CANCEL)) {
+                                tick(item, "", 0, 0);
+                                break;
                             }
                         }
                     }
 
                     if (mCurrentNotficationEntry == null) clearTicker();
                     mLastNotificationEntry = null;
+
+                    mEffect.nap(1500);
+                    if (mHideTicker) mEffect.sleep(HaloEffect.NAP_TIME + 3000, HaloEffect.SLEEP_TIME, false);
+
                 } else if (mGesture == Gesture.UP1) {
                     // Dismiss notification
                     playSoundEffect(SoundEffectConstants.CLICK);
@@ -813,7 +821,11 @@ public class Halo extends FrameLayout implements Ticker.TickerCallback {
         mEffect.unscheduleSleep();
         mHandler.removeCallbacksAndMessages(null);
         // Kill callback
-        mBar.getTicker().setUpdateEvent(null);
+        if(ExtendedPropertiesUtils.isTablet()) {
+            if (mBar.getTabletTicker() != null) mBar.getTabletTicker().setUpdateEvent(null);
+        } else {
+             mBar.getTicker().setUpdateEvent(null);
+        }
         // Flag tasker
         mBar.setHaloTaskerActive(false, false);
         // Kill the effect layer
@@ -1141,6 +1153,10 @@ public class Halo extends FrameLayout implements Ticker.TickerCallback {
 
         mEffect.updateResources();
         mEffect.invalidate();
+    }
+
+    public void updateTicker(StatusBarNotification notification) {
+        loadLastNotification(true);
     }
 
     // This is the android ticker callback
