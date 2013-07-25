@@ -699,6 +699,7 @@ public interface WindowManager extends ViewManager {
          * has translucent regions.
          */
         public static final int FLAG_SHOW_WALLPAPER = 0x00100000;
+
         
         /** Window flag: when set as a window is being added or made
          * visible, once the window has been shown then the system will
@@ -806,10 +807,6 @@ public interface WindowManager extends ViewManager {
         
         /** Window flag: Overrides default power key behavior
          * {@hide} */
-        public static final int PREVENT_POWER_KEY = 0x80000000;
-
-        /** Window flag: Overrides default power key behavior
-            @{hide} */
         public static final int PREVENT_POWER_KEY = 0x80000000;
 
         /**
