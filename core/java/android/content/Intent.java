@@ -3316,6 +3316,7 @@ public class Intent implements Parcelable, Cloneable {
      * places where the framework may automatically set the exclude flag).
      */
     public static final int FLAG_INCLUDE_STOPPED_PACKAGES = 0x00000020;
+
     /**
      * If set, the new activity is not kept in the history stack.  As soon as
      * the user navigates away from it, the activity is finished.  This may also
@@ -3536,6 +3537,12 @@ public class Intent implements Parcelable, Cloneable {
      * in mutil window scenarios.
      */
     public static final int FLAG_FLOATING_WINDOW = 0x00002000;
+    /**
+     * If set in an Intent passed to {@link Context#startActivity Context.startActivity()},
+     * this flag will cause a newly launching task to be resized according to the split
+     * view metrics, making it running alongside another app.
+     */
+    public static final int FLAG_ACTIVITY_SPLIT_VIEW = 0x00005000;
     /**
      * If set, when sending a broadcast only registered receivers will be
      * called -- no BroadcastReceiver components will be launched.
