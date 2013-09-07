@@ -92,7 +92,7 @@ public class QuickSettingsTile implements OnClickListener {
         TextView tv = (TextView) mTile.findViewById(R.id.text);
         ImageView iv = (ImageView) mTile.findViewById(R.id.image);
         tv.setText(mLabel);
-        tv.setCompoundDrawablesWithIntrinsicBounds(0, mDrawable, 0, 0);
+//        iv.setCompoundDrawablesWithIntrinsicBounds(0, mDrawable, 0, 0);
         iv.setImageDrawable(mContext.getResources().getDrawable(mDrawable));
 		tv.setTextColor(getTileTextColor(mContext));
     }
