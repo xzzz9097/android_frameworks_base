@@ -106,6 +106,8 @@ class QuickSettings {
     boolean mTilesSetUp = false;
     boolean mUseDefaultAvatar = false;
 
+    int mTileTextSize;
+
     private Handler mHandler;
 
     // The set of QuickSettingsTiles that have dynamic spans (and need to be updated on

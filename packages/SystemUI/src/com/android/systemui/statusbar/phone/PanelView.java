@@ -693,6 +693,7 @@ public class PanelView extends FrameLayout {
                 mPeekAnimator, ((mPeekAnimator!=null && mPeekAnimator.isStarted())?" (started)":""),
                 mTimeAnimator, ((mTimeAnimator!=null && mTimeAnimator.isStarted())?" (started)":"")
         ));
+    }
 
 	private void setPropFactor() {
 		Display display = getDisplay();
