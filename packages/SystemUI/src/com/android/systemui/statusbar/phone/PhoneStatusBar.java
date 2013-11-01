@@ -238,6 +238,9 @@ public class PhoneStatusBar extends BaseStatusBar {
 
     private boolean mShowCarrierInPanel = false;
 
+    // drag bar
+    CloseDragHandle mCloseView;
+    private int mCloseViewHeight;
     // position
     int[] mPositionTmp = new int[2];
     boolean mExpandedVisible;
@@ -322,6 +325,7 @@ class SettingsObserver extends ContentObserver {
 
         void observe() {
             ContentResolver resolver = mContext.getContentResolver();
+            resolver.registerContentObserver(Settings.System.getUriFor(
                     Settings.System.NOTIFICATION_SHORTCUTS_TOGGLE), false, this, UserHandle.USER_ALL);
             resolver.registerContentObserver(Settings.System.getUriFor(
                     Settings.System.NOTIFICATION_SHORTCUTS_HIDE_CARRIER), false, this, UserHandle.USER_ALL);
@@ -666,30 +670,41 @@ class SettingsObserver extends ContentObserver {
             }
         }
 
-        mWifiLabel = (TextView)mStatusBarWindow.findViewById(R.id.wifi_text);
-        mNetworkController.addWifiLabelView(mWifiLabel);
+	mWifiLabel = (TextView)mStatusBarWindow.findViewById(R.id.wifi_text);
 
-        mWifiLabel.addTextChangedListener(new TextWatcher() {
+        if (mWifiLabel != null) {
+            mNetworkController.addWifiLabelView(mWifiLabel);
 
-            public void afterTextChanged(Editable s) {
-            }
-            public void beforeTextChanged(CharSequence s, int start, int count,
-                    int after) {
-            }
-            public void onTextChanged(CharSequence s, int start, int before,
-                    int count) {
-                 if (Settings.System.getInt(mContext.getContentResolver(),
-                        Settings.System.NOTIFICATION_SHOW_WIFI_SSID, 0) == 1 &&
-                        count > 0) {
-                    mWifiView.setVisibility(View.VISIBLE);
+            mWifiLabel.addTextChangedListener(new TextWatcher() {
+
+                public void afterTextChanged(Editable s) {
                 }
-                else
-                {
-                    mWifiView.setVisibility(View.GONE);
+                public void beforeTextChanged(CharSequence s, int start, int count,
+                        int after) {
                 }
-            }
+                public void onTextChanged(CharSequence s, int start, int before,
+                        int count) {
+                     if (Settings.System.getInt(mContext.getContentResolver(),
+                            Settings.System.NOTIFICATION_SHOW_WIFI_SSID, 0) == 1 &&
+                            count > 0) {
+                        mWifiView.setVisibility(View.VISIBLE);
+                    }
+                    else
+                    {
+                        mWifiView.setVisibility(View.GONE);
+                    }
+                }
 
-        });
+            });
+
+            // set up the dynamic hide/show of the labels
+            mPile.setOnSizeChangedListener(new OnSizeChangedListener() {
+                @Override
+                public void onSizeChanged(View view, int w, int h, int oldw, int oldh) {
+                    updateCarrierAndWifiLabelVisibility(false);
+                }
+            });
+        }
 
         // set up the dynamic hide/show of the labels
         mPile.setOnSizeChangedListener(new OnSizeChangedListener() {
@@ -1309,6 +1324,8 @@ protected WindowManager.LayoutParams getRecentsLayoutParams(LayoutParams layoutP
     }
 
     protected void updateCarrierAndWifiLabelVisibility(boolean force) {
+        if (!mShowCarrierInPanel || mCarrierAndWifiView == null) return;
+
         if (DEBUG) {
             Slog.d(TAG, String.format("pileh=%d scrollh=%d carrierh=%d",
                     mPile.getHeight(), mScrollView.getHeight(), mCarrierAndWifiViewHeight));
@@ -1319,7 +1336,7 @@ protected WindowManager.LayoutParams getRecentsLayoutParams(LayoutParams layoutP
             !(emergencyCallsShownElsewhere && mNetworkController.isEmergencyOnly())
             && mPile.getHeight() < (mNotificationPanel.getHeight() - mCarrierAndWifiViewHeight - mNotificationHeaderHeight - calculateCarrierLabelBottomMargin())
             && mScrollView.getVisibility() == View.VISIBLE;
-        
+
         if (force || mCarrierAndWifiViewVisible != makeVisible) {
             mCarrierAndWifiViewVisible = makeVisible;
             if (DEBUG) {
@@ -1329,17 +1346,15 @@ protected WindowManager.LayoutParams getRecentsLayoutParams(LayoutParams layoutP
             if (makeVisible) {
                 mCarrierAndWifiView.setVisibility(View.VISIBLE);
             }
-            mCarrierAndWifiView.animate()
+             mCarrierAndWifiView.animate()
                 .alpha(makeVisible ? 1f : 0f)
-                //.setStartDelay(makeVisible ? 500 : 0)
-                //.setDuration(makeVisible ? 750 : 100)
                 .setDuration(150)
                 .setListener(makeVisible ? null : new AnimatorListenerAdapter() {
                     @Override
                     public void onAnimationEnd(Animator animation) {
                         if (!mCarrierAndWifiViewVisible) { // race
                             mCarrierAndWifiView.setVisibility(View.INVISIBLE);
-                            mCarrierAndWifiView.animate().alpha(0f);
+                            mCarrierAndWifiView.setAlpha(0f);
                         }
                     }
                 })
