@@ -91,6 +91,8 @@ public class KeyguardHostView extends KeyguardViewBase {
     private SecurityMode mCurrentSecuritySelection = SecurityMode.Invalid;
     private int mAppWidgetToShow;
 
+    private boolean mDefaultAppWidgetAttached;
+
     protected OnDismissAction mDismissAction;
 
     protected int mFailedAttempts;
@@ -233,9 +235,16 @@ public class KeyguardHostView extends KeyguardViewBase {
         // that are triggered by deleteAppWidgetId, which is why we're doing this
         int[] appWidgetIdsInKeyguardSettings = mLockPatternUtils.getAppWidgets();
         int[] appWidgetIdsBoundToHost = mAppWidgetHost.getAppWidgetIds();
+        int fallbackWidgetId = mLockPatternUtils.getFallbackAppWidgetId();
         for (int i = 0; i < appWidgetIdsBoundToHost.length; i++) {
             int appWidgetId = appWidgetIdsBoundToHost[i];
             if (!contains(appWidgetIdsInKeyguardSettings, appWidgetId)) {
+                if (appWidgetId == fallbackWidgetId) {
+                    // Reset fallback widget id in the event that widgets have been
+                    // enabled, and fallback widget is being deleted
+                    mLockPatternUtils.writeFallbackAppWidgetId(
+                            AppWidgetManager.INVALID_APPWIDGET_ID);
+                }
                 Log.d(TAG, "Found a appWidgetId that's not being used by keyguard, deleting id "
                         + appWidgetId);
                 mAppWidgetHost.deleteAppWidgetId(appWidgetId);
@@ -425,7 +434,8 @@ public class KeyguardHostView extends KeyguardViewBase {
 
         // Don't let the user drag the challenge down if widgets are disabled.
         if (mSlidingChallengeLayout != null) {
-            mSlidingChallengeLayout.setEnableChallengeDragging(!widgetsDisabled());
+            mSlidingChallengeLayout.setEnableChallengeDragging(
+                    !widgetsDisabled() || mDefaultAppWidgetAttached);
         }
 
         // Select the appropriate page
@@ -1298,7 +1308,6 @@ public class KeyguardHostView extends KeyguardViewBase {
 
     private void addWidgetsFromSettings() {
         if (mSafeModeEnabled || widgetsDisabled()) {
-            addDefaultStatusWidget(0);
             return;
         }
 
@@ -1357,13 +1366,13 @@ public class KeyguardHostView extends KeyguardViewBase {
 
             final boolean userAddedWidgetsEnabled = !widgetsDisabled();
 
-            boolean addedDefaultAppWidget = false;
+            mDefaultAppWidgetAttached = false;
 
             if (!mSafeModeEnabled) {
                 if (userAddedWidgetsEnabled) {
                     int appWidgetId = allocateIdForDefaultAppWidget();
                     if (appWidgetId != AppWidgetManager.INVALID_APPWIDGET_ID) {
-                        addedDefaultAppWidget = addWidget(appWidgetId, insertPageIndex, true);
+                        mDefaultAppWidgetAttached = addWidget(appWidgetId, insertPageIndex, true);
                     }
                 } else {
                     // note: even if widgetsDisabledByDpm() returns true, we still bind/create
@@ -1376,8 +1385,8 @@ public class KeyguardHostView extends KeyguardViewBase {
                         }
                     }
                     if (appWidgetId != AppWidgetManager.INVALID_APPWIDGET_ID) {
-                        addedDefaultAppWidget = addWidget(appWidgetId, insertPageIndex, false);
-                        if (!addedDefaultAppWidget) {
+                        mDefaultAppWidgetAttached = addWidget(appWidgetId, insertPageIndex, false);
+                        if (!mDefaultAppWidgetAttached) {
                             mAppWidgetHost.deleteAppWidgetId(appWidgetId);
                             mLockPatternUtils.writeFallbackAppWidgetId(
                                     AppWidgetManager.INVALID_APPWIDGET_ID);
@@ -1387,7 +1396,7 @@ public class KeyguardHostView extends KeyguardViewBase {
             }
 
             // Use the built-in status/clock view if we can't inflate the default widget
-            if (!addedDefaultAppWidget) {
+            if (!mDefaultAppWidgetAttached) {
                 addDefaultStatusWidget(insertPageIndex);
             }
 
