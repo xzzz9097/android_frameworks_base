@@ -2676,12 +2676,6 @@ public final class Settings {
         public static final String HALO_ACTIVE = "halo_active";
 
         /**
-         * Floating Shade, should default to 0 (disabled)
-         * @hide
-         */
-        public static final String FLOATING_SHADE = "floating_shade";
-
-        /**
          * HALO reversed?, should default to 1 (yes, reverse)
          * @hide
          */
