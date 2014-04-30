@@ -1518,7 +1518,7 @@
     <!-- Allows an application to read or write the system settings. -->
     <permission android:name="android.permission.WRITE_SETTINGS"
         android:permissionGroup="android.permission-group.SYSTEM_TOOLS"
-        android:protectionLevel="normal"
+        android:protectionLevel="dangerous"
         android:label="@string/permlab_writeSettings"
         android:description="@string/permdesc_writeSettings" />
 
@@ -2487,6 +2487,14 @@
          any metadata and intents attached.
          @hide -->
     <permission android:name="android.permission.ACCESS_NOTIFICATIONS"
+        android:label="@string/permlab_accessNotifications"
+        android:description="@string/permdesc_accessNotifications"
+        android:protectionLevel="signature|system" />
+
+    <!-- Internal permission protecting access to internal notification listener
+        @hide
+    -->
+    <permission android:name="android.permission.SYSTEM_NOTIFICATION_LISTENER"
         android:label="@string/permlab_accessNotifications"
         android:description="@string/permdesc_accessNotifications"
         android:protectionLevel="signature|system" />

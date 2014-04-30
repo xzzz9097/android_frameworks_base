@@ -21,6 +21,8 @@
     <string name="screenshot_delete_confirmation">Captura de pantalla eliminada</string>
     <string name="quick_settings_quick_pull_down_title">Desplegament ràpid</string>
     <string name="quick_settings_quick_pull_down_message">Li agradaria que el marge de la barra de notificacions desplegui el panell d\'ajustaments ràpids?</string>
+    <string name="navbar_recents_clear_all_title">Netejar recents</string>
+    <string name="navbar_recents_clear_all_message">Li agradaria que el "botó recents" netegi totes les aplicacions?</string>
     <string name="quick_settings_battery_charging">Carregant</string>
     <string name="quick_settings_battery_discharging">Descarregant</string>
     <string name="quick_settings_immersive_global_on_label">Immersió</string>
@@ -54,4 +56,11 @@
     <string name="quick_settings_location_mode_high_label">Alta</string>
     <string name="quick_settings_location_mode_battery_label">Bateria</string>
     <string name="quick_settings_location_mode_sensors_label">Dispositiu</string>
+    <string name="quick_settings_ringer_mode_silent_label">Silenci</string>
+    <string name="quick_settings_ringer_mode_vibrate_label">Vibració</string>
+    <string name="quick_settings_ringer_mode_normal_label">So</string>
+    <string name="quick_settings_ringer_mode_normal_vibrate_label">So i vibració</string>
+    <string name="quick_settings_volume_label">Volum</string>
+    <string name="enable_pie_control_title">Controls circulars</string>
+    <string name="enable_pie_control_message">Li agradaria utilitzar els controls circulars al mode immersiu?</string>
 </resources>

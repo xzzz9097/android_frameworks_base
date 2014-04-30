@@ -30,6 +30,7 @@ import android.content.IntentFilter;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.content.res.Configuration;
+import android.content.res.Resources;
 import android.database.ContentObserver;
 import android.graphics.Rect;
 import android.graphics.PixelFormat;
@@ -50,6 +51,7 @@ import android.service.dreams.IDreamManager;
 import android.service.notification.StatusBarNotification;
 import android.text.TextUtils;
 import android.util.Log;
+import android.util.SettingConfirmationHelper;
 import android.view.Display;
 import android.view.Gravity;
 import android.view.IWindowManager;
@@ -75,10 +77,14 @@ import com.android.internal.widget.SizeAdaptiveLayout;
 import com.android.systemui.R;
 import com.android.systemui.RecentsComponent;
 import com.android.systemui.recent.RecentsActivity;
+import com.android.systemui.recent.RecentTasksLoader;
+import com.android.systemui.recent.TaskDescription;
 import com.android.systemui.SearchPanelView;
 import com.android.systemui.SystemUI;
+import com.android.systemui.statusbar.notification.NotificationPeek;
 import com.android.systemui.statusbar.policy.BatteryController;
 import com.android.systemui.statusbar.policy.Clock;
+import com.android.systemui.statusbar.phone.Ticker;
 import com.android.systemui.statusbar.phone.KeyguardTouchDelegate;
 import com.android.systemui.statusbar.pie.PieControlPanel;
 import com.android.systemui.statusbar.pie.PieController;
@@ -148,6 +154,8 @@ public abstract class BaseStatusBar extends SystemUI implements
     public SignalClusterView mSignalCluster;
     public Clock mClock;
 
+    private OrientationEventListener mOrientationListener;
+
     protected int mLayoutDirection = -1; // invalid
     private Locale mLocale;
     protected boolean mUseHeadsUp = false;
@@ -155,6 +163,9 @@ public abstract class BaseStatusBar extends SystemUI implements
     protected IDreamManager mDreamManager;
     PowerManager mPowerManager;
     protected int mRowHeight;
+
+    // Notification peek
+    protected NotificationPeek mNotificationPeek;
 
     // UI-specific methods
 
@@ -190,6 +201,10 @@ public abstract class BaseStatusBar extends SystemUI implements
 
     public int getNotificationCount() {
         return mNotificationData.size();
+    }
+
+    public NotificationData getNotifications() {
+        return mNotificationData;
     }
 
     private ContentObserver mProvisioningObserver = new ContentObserver(mHandler) {
@@ -308,6 +323,8 @@ public abstract class BaseStatusBar extends SystemUI implements
         mLocale = mContext.getResources().getConfiguration().locale;
         mLayoutDirection = TextUtils.getLayoutDirectionFromLocale(mLocale);
 
+        mNotificationPeek = new NotificationPeek(this, mContext);
+
         // Connect in to the status bar manager service
         StatusBarIconList iconList = new StatusBarIconList();
         ArrayList<IBinder> notificationKeys = new ArrayList<IBinder>();
@@ -373,39 +390,76 @@ public abstract class BaseStatusBar extends SystemUI implements
 
         SettingsObserver settingsObserver = new SettingsObserver(new Handler());
         settingsObserver.observe();
-
-        OrientationEventListener orientationListener
-                = new OrientationEventListener(mContext, SensorManager.SENSOR_DELAY_NORMAL) {
-            @Override
-            public void onOrientationChanged(int orientation) {
-                int rotation = mDisplay.getRotation();
-                if (rotation != mOrientation) {
-                    if (mPieController != null) mPieController.detachPie();
-                    mOrientation = rotation;
-                }
-            }
-        };
-        orientationListener.enable();
-
     }
 
-	public void updatePieControls(boolean reset) {
+    public void updatePieControls(boolean reset) {
+        ContentResolver resolver = mContext.getContentResolver();
+
         if(reset) {
-            ContentResolver resolver = mContext.getContentResolver();
             Settings.System.putIntForUser(resolver,
                     Settings.System.PIE_GRAVITY, 0, UserHandle.USER_CURRENT);
             Settings.System.putIntForUser(resolver,
                     Settings.System.PIE_MODE, 0, UserHandle.USER_CURRENT);
+            toggleOrientationListener(false);
+        } else {
+            getOrientationListener();
+            toggleOrientationListener(Settings.System.getIntForUser(resolver,
+                    Settings.System.IMMERSIVE_MODE, 0, UserHandle.USER_CURRENT) != 0);
         }
+
         if (mPieController == null) {
             mPieController = PieController.getInstance();
             mPieController.init(mContext, mWindowManager, this);
         }
-        int gravity = Settings.System.getInt(mContext.getContentResolver(),
+        int gravity = Settings.System.getInt(resolver,
                 Settings.System.PIE_GRAVITY, 0);
         mPieController.resetPie(!reset, gravity);
     }
 
+    public void toggleOrientationListener(boolean enable) {
+        if (mOrientationListener == null) {
+            if (!enable) {
+                // Do nothing if listener has already dropped
+                return;
+            } else {
+                ContentResolver resolver = mContext.getContentResolver();
+                boolean shouldEnable = Settings.System.getIntForUser(resolver,
+                        Settings.System.IMMERSIVE_MODE, 0, UserHandle.USER_CURRENT) != 0 &&
+                        Settings.System.getIntForUser(resolver,
+                        Settings.System.PIE_STATE, 0, UserHandle.USER_CURRENT) == 1;
+                if (shouldEnable) {
+                    // Re-init Orientation listener for later action
+                    getOrientationListener();
+                } else {
+                    return;
+                }
+            }
+        }
+
+        if (enable && mPowerManager.isScreenOn()) {
+            mOrientationListener.enable();
+        } else {
+            mOrientationListener.disable();
+            // if it has been disabled, then don't leave it to
+            // prevent called from PhoneWindowManager
+            mOrientationListener = null;
+        }
+    }
+
+    private void getOrientationListener() {
+        if (mOrientationListener == null)
+            mOrientationListener = new OrientationEventListener(mContext,
+                    SensorManager.SENSOR_DELAY_NORMAL) {
+                @Override
+                public void onOrientationChanged(int orientation) {
+                    int rotation = mDisplay.getRotation();
+                    if (rotation != mOrientation) {
+                        if (mPieController != null) mPieController.detachPie();
+                        mOrientation = rotation;
+                    }
+                }
+            };
+    }
 
     public void userSwitched(int newUserId) {
         // should be overridden
@@ -617,6 +671,50 @@ public abstract class BaseStatusBar extends SystemUI implements
 
     protected abstract View getStatusBarView();
 
+    protected boolean mSwitchingApp = false;
+    private RecentTasksLoader mRecentTasksLoader;
+    protected int mSwitchLastAppHoldoff = 200;
+    private Runnable mSwitchLastApp = new Runnable() {
+        public void run() {
+            int selection = Settings.System.getInt(mContext.getContentResolver(),
+                    Settings.System.RECENTS_SWITCH, 0);
+            int clearAllSelection = Settings.System.getInt(mContext.getContentResolver(),
+                    Settings.System.NAVBAR_RECENTS_CLEAR_ALL, 0);
+            if (clearAllSelection != 0 && clearAllSelection != 3 && (selection == 0 || selection == 3)) {
+                selectSwitchApps();
+            } else {
+                boolean switchApps = selection == 1;
+                if (!switchApps) {
+                    toggleRecentsActivity();
+                } else {
+                    mSwitchingApp = true;
+                    if (mRecentTasksLoader == null) {
+                        mRecentTasksLoader = RecentTasksLoader.getInstance(mContext);
+                    }
+                    TaskDescription task = mRecentTasksLoader.getFirstTask(true);
+                    if (task != null) {
+                        Intent intent = task.getIntent();
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                        mContext.startActivity(intent);
+                    } else {
+                        toggleRecentsActivity();
+                    }
+                }
+            }
+        }
+    };
+
+    private void selectSwitchApps() {
+        Resources r = mContext.getResources();
+
+        SettingConfirmationHelper helper = new SettingConfirmationHelper(mContext);
+        helper.showConfirmationDialogForSetting(
+                r.getString(R.string.enable_switch_apps_title),
+                r.getString(R.string.enable_switch_apps_message),
+                r.getDrawable(R.drawable.switch_apps),
+                Settings.System.RECENTS_SWITCH);
+    }
+
     protected View.OnTouchListener mRecentsPreloadOnTouchListener = new View.OnTouchListener() {
         // additional optimization when we have software system buttons - start loading the recent
         // tasks on touch down
@@ -625,12 +723,20 @@ public abstract class BaseStatusBar extends SystemUI implements
             int action = event.getAction() & MotionEvent.ACTION_MASK;
             if (action == MotionEvent.ACTION_DOWN) {
                 preloadRecentTasksList();
+                mSwitchingApp = false;
+                ContentResolver resolver = mContext.getContentResolver();
+                if (!isRecentAppsVisible()) {
+                    mHandler.removeCallbacks(mSwitchLastApp);
+                    mHandler.postDelayed(mSwitchLastApp, mSwitchLastAppHoldoff);
+                }
             } else if (action == MotionEvent.ACTION_CANCEL) {
                 cancelPreloadingRecentTasksList();
+                mHandler.removeCallbacks(mSwitchLastApp);
             } else if (action == MotionEvent.ACTION_UP) {
-                if (!v.isPressed()) {
+                if (!v.isPressed() || mSwitchingApp) {
                     cancelPreloadingRecentTasksList();
                 }
+                mHandler.removeCallbacks(mSwitchLastApp);
 
             }
             return false;
@@ -839,17 +945,38 @@ public abstract class BaseStatusBar extends SystemUI implements
         return new NotificationClicker(intent, pkg, tag, id);
     }
 
+    public NotificationClicker makeClicker(Intent intent) {
+        return new NotificationClicker(intent);
+    }
+
     public class NotificationClicker implements View.OnClickListener {
-        public PendingIntent mIntent;
-        public String mPkg;
-        public String mTag;
-        public int mId;
+        private KeyguardTouchDelegate mKeyguard;
+        private PendingIntent mPendingIntent;
+        private Intent mIntent;
+        private String mPkg;
+        private String mTag;
+        private int mId;
+        private boolean mFloat;
 
         public NotificationClicker(PendingIntent intent, String pkg, String tag, int id) {
-            mIntent = intent;
+            this();
+            mPendingIntent = intent;
             mPkg = pkg;
             mTag = tag;
             mId = id;
+        }
+
+        public NotificationClicker(Intent intent) {
+            this();
+            mIntent = intent;
+        }
+
+        public NotificationClicker() {
+            mKeyguard = KeyguardTouchDelegate.getInstance(mContext);
+        }
+
+        public void makeFloating(boolean floating) {
+            mFloat = floating;
         }
 
         public void onClick(View v) {
@@ -865,33 +992,44 @@ public abstract class BaseStatusBar extends SystemUI implements
             } catch (RemoteException e) {
             }
 
-            if (mIntent != null) {
+            //int flags = Intent.FLAG_FLOATING_WINDOW | Intent.FLAG_ACTIVITY_CLEAR_TASK;
+            if (mPendingIntent != null) {
                 int[] pos = new int[2];
                 v.getLocationOnScreen(pos);
                 Intent overlay = new Intent();
+                //if (mFloat) overlay.addFlags(flags);
                 overlay.setSourceBounds(
-                        new Rect(pos[0], pos[1], pos[0]+v.getWidth(), pos[1]+v.getHeight()));
+                        new Rect(pos[0], pos[1], pos[0] + v.getWidth(), pos[1] + v.getHeight()));
                 try {
-                    mIntent.send(mContext, 0, overlay);
+                    mPendingIntent.send(mContext, 0, overlay);
                 } catch (PendingIntent.CanceledException e) {
                     // the stack trace isn't very helpful here.  Just log the exception message.
                     Log.w(TAG, "Sending contentIntent failed: " + e);
                 }
-
-                KeyguardTouchDelegate.getInstance(mContext).dismiss();
+            } else if(mIntent != null) {
+                //mIntent.addFlags(flags);
+                mContext.startActivity(mIntent);
             }
 
-            try {
-                mBarService.onNotificationClick(mPkg, mTag, mId);
-            } catch (RemoteException ex) {
-                // system process is dead if we're here.
+            if(mKeyguard.isShowingAndNotHidden()) mKeyguard.dismiss();
+
+            if(mPkg != null) { // check if we're dealing with a notification
+                try {
+                    mBarService.onNotificationClick(mPkg, mTag, mId);
+                } catch (RemoteException ex) {
+                    // system process is dead if we're here.
+                }
             }
 
             // close the shade if it was open
             animateCollapsePanels(CommandQueue.FLAG_EXCLUDE_NONE);
             visibilityChanged(false);
+
+            // hide notification peek screen
+            mNotificationPeek.dismissNotification();
         }
     }
+
     /**
      * The LEDs are turned o)ff when the notification panel is shown, even just a little bit.
      * This was added last-minute and is inconsistent with the way the rest of the notifications
@@ -937,6 +1075,8 @@ public abstract class BaseStatusBar extends SystemUI implements
         updateExpansionStates();
         updateNotificationIcons();
 
+        mNotificationPeek.removeNotification(entry.notification);
+
         return entry.notification;
     }
 
@@ -961,7 +1101,7 @@ public abstract class BaseStatusBar extends SystemUI implements
             handleNotificationError(key, notification, "Couldn't create icon: " + ic);
             return null;
         }
-
+        // Construct the expanded view.
         NotificationData.Entry entry = new NotificationData.Entry(key, notification, iconView);
         if (!inflateViews(entry, mPile)) {
             handleNotificationError(key, notification, "Couldn't expand RemoteViews for: "
@@ -979,6 +1119,8 @@ public abstract class BaseStatusBar extends SystemUI implements
         }
         updateExpansionStates();
         updateNotificationIcons();
+
+        mNotificationPeek.showNotification(entry.notification, false);
     }
 
     private void addNotificationViews(IBinder key, StatusBarNotification notification) {
@@ -1163,6 +1305,7 @@ public abstract class BaseStatusBar extends SystemUI implements
         } else {
             entry.content.setOnClickListener(null);
         }
+        mNotificationPeek.showNotification(entry.notification, true);
     }
 
     protected void notifyHeadsUpScreenOn(boolean screenOn) {
