@@ -2,7 +2,7 @@
  * Copyright (c) 2013 The Linux Foundation. All rights reserved.
  * Not a Contribution.
  * Copyright (C) 2006 The Android Open Source Project
- * This code has been modified. Portions copyright (C) 2013, ParanoidAndroid Project.
+ * This code has been modified. Portions copyright (C) 2014, ParanoidAndroid Project.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -3003,22 +3003,13 @@ public final class Settings {
 
         /**
          * Pie control panel. Meet him on the spot.
+         * State (full/lite) based on immersive mode.
          * 0 = off
          * 1 = on
          * Changes aspect depends on status bar visibility.
          * @hide
          */
         public static final String PIE_STATE = "pie_state";
-
-        /**
-         * Used by Phone Window Manager to tell PIE which mode to use
-         * depending on whether nav/statusbar is hidden
-         * 0 = off
-         * 1 = simple
-         * 2 = full
-         * @hide
-         */
-        public static final String PIE_MODE = "pie_mode";
 
         /**
          * Location of the pie in the screen
@@ -3059,6 +3050,18 @@ public final class Settings {
          * @hide
          */
         public static final String DIALPAD_STATE = "dialpad_state";
+
+        /**
+         * Settings to backup. This is here so that it's in the same place as the settings
+         * keys and easy to update.
+         *
+         * NOTE: Settings are backed up and restored in the order they appear
+         *       in this array. If you have one setting depending on another,
+         *       make sure that they are ordered appropriately.
+         *
+         * @hide
+         */
+        public static final String HOVER_STATE = "hover_state";
 
         /**
          * Settings to backup. This is here so that it's in the same place as the settings
@@ -5084,6 +5087,9 @@ public final class Settings {
         /** @hide */
         public static final String IMMERSIVE_MODE_CONFIRMATIONS = "immersive_mode_confirmations";
 
+        /** @hide */
+        public static final String HOVER_FIRST_TIME = "hover_first_time";
+
         /**
          * This is the query URI for finding a print service to install.
          *
@@ -5868,6 +5874,12 @@ public final class Settings {
          * @hide
          */
         public static final String SMS_SHORT_CODE_RULE = "sms_short_code_rule";
+
+       /**
+        * Used to select TCP's default initial receiver window size in segments - defaults to a build config value
+        * @hide
+        */
+       public static final String TCP_DEFAULT_INIT_RWND = "tcp_default_init_rwnd";
 
        /**
         * Used to disable Tethering on a device - defaults to true
@@ -7001,6 +7013,19 @@ public final class Settings {
           * @hide
           */
         public static final String MULTI_SIM_DATA_CALL_SUBSCRIPTION = "multi_sim_data_call";
+
+        /**
+          * Subscription set by user for data call on a multi sim device. The difference from
+          * MULTI_SIM_DATA_CALL_SUBSCRIPTION is that this is the subscription that user set
+          * originally. Where as MULTI_SIM_DATA_CALL_SUBSCRIPTION holds the current data call
+          * subscription value, which could be different from user preferred value due to
+          * temporary DDS switch for say a silent DDS switch for MMS transaction.
+          * The value may change dynamically in case of a SIM removal or de activation.
+          * The supported values are 0 = SUB1, 1 = SUB2, 2 = SUB3, etc.
+          * @hide
+          */
+        public static final String MULTI_SIM_DEFAULT_DATA_CALL_SUBSCRIPTION
+                = "multi_sim_defaut_data_call";
 
         /**
           * Subscription to be used for SMS on a multi sim device. The supported values

@@ -999,7 +999,7 @@
     <!-- Max space (in MB) allocated to DownloadManager to store the downloaded
          files if they are to be stored in DownloadManager's data dir,
          which typically is /data/data/com.android.providers.downloads/files -->
-    <integer name="config_downloadDataDirSize">100</integer>
+    <integer name="config_downloadDataDirSize">200</integer>
 
     <!-- Max number of downloads allowed to proceed concurrently -->
     <integer name="config_MaxConcurrentDownloadsAllowed">5</integer>
@@ -1031,14 +1031,6 @@
 
     <!-- The VoiceMail default value is displayed to my own number if it is true -->
     <bool name="config_telephony_use_own_number_for_voicemail">false</bool>
-
-    <!-- Set additional audio parameters for incall audio
-         Usage: parameter=onstring=offstring
-         Examples: <item>realcall=on=off</item>
-                   <item>dualmic_enabled=true=false</item>
-                   <item>mic_boost=yes=no</item> -->
-    <string-array name="config_telephony_set_audioparameters" translatable="false">
-    </string-array>
 
     <!-- If this value is true, Sms encoded as octet is decoded by utf8 decoder.
          If false, decoded by Latin decoder. -->
@@ -1508,4 +1500,11 @@
     -->
     <integer name="config_longPressOnMenuBehavior">3</integer>
 
+    <!-- Override the default detection behavior for the framework method
+         android.view.ViewConfiguration#hasPermanentMenuKey().
+         Valid settings are:
+         0 - No change. Use the default autodetection behavior.
+         1 - The device DOES have a permanent menu key; ignore autodetection.
+         2 - The device DOES NOT have a permanent menu key; ignore autodetection. -->
+    <integer name="config_overrideHasPermanentMenuKey">0</integer>
 </resources>
