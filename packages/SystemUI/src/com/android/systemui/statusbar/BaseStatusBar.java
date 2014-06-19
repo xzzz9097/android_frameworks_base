@@ -243,6 +243,10 @@ public abstract class BaseStatusBar extends SystemUI implements
         return mNotificationData;
     }
 
+    public SearchPanelView getSearchPanelView() {
+        return mSearchPanelView;
+    }
+
     public RemoteViews.OnClickHandler getNotificationClickHandler() {
         return mOnClickHandler;
     }
@@ -553,11 +557,27 @@ public abstract class BaseStatusBar extends SystemUI implements
     }
 
     protected void updateClearAllRecents(boolean navBarHidden, boolean pieEnabled) {
+
+        // check if device has hardware keys
+        boolean hasKeys = false;
+        try {
+                IWindowManager wm = WindowManagerGlobal.getWindowManagerService();
+                hasKeys = !wm.needsNavigationBar();
+            } catch (RemoteException e) {
+            }
+      if (!hasKeys) {
         // use alternative clear all view/button?
         Settings.System.putInt(mContext.getContentResolver(),
                 Settings.System.ALTERNATIVE_RECENTS_CLEAR_ALL,
                         navBarHidden && pieEnabled ? SHOW_ALTERNATIVE_RECENTS_CLEAR_ALL
                             : HIDE_ALTERNATIVE_RECENTS_CLEAR_ALL);
+      } else {
+        // use alternative clear all view/button?
+        Settings.System.putInt(mContext.getContentResolver(),
+                Settings.System.ALTERNATIVE_RECENTS_CLEAR_ALL,
+                         hasKeys || (navBarHidden && pieEnabled) ? SHOW_ALTERNATIVE_RECENTS_CLEAR_ALL
+                            : HIDE_ALTERNATIVE_RECENTS_CLEAR_ALL);
+      }
     }
 
     protected void updateHoverState() {
@@ -704,8 +724,15 @@ public abstract class BaseStatusBar extends SystemUI implements
                                 // System is dead
                             }
                             if (allowed) {
-                                launchFloating(contentIntent);
-                                animateCollapsePanels(CommandQueue.FLAG_EXCLUDE_NONE);
+                                if (contentIntent == null) {
+                                    String text = mContext.getResources().getString(R.string.status_bar_floating_no_interface);
+                                    int duration = Toast.LENGTH_SHORT;
+                                    animateCollapsePanels(CommandQueue.FLAG_EXCLUDE_NONE);
+                                    Toast.makeText(mContext, text, duration).show();
+                                } else {
+                                    launchFloating(contentIntent);
+                                    animateCollapsePanels(CommandQueue.FLAG_EXCLUDE_NONE);
+                                }
                             } else {
                                 String text = mContext.getResources().getString(R.string.floating_mode_blacklisted_app);
                                 int duration = Toast.LENGTH_LONG;
@@ -1010,9 +1037,9 @@ public abstract class BaseStatusBar extends SystemUI implements
 
     public boolean inflateViews(NotificationData.Entry entry, ViewGroup parent) {
         int minHeight =
-                mContext.getResources().getDimensionPixelSize(R.dimen.notification_min_height);
+                mContext.getResources().getDimensionPixelSize(R.dimen.default_notification_min_height);
         int maxHeight =
-                mContext.getResources().getDimensionPixelSize(R.dimen.notification_max_height);
+                mContext.getResources().getDimensionPixelSize(R.dimen.default_notification_max_height);
         StatusBarNotification sbn = entry.notification;
         RemoteViews contentView = sbn.getNotification().contentView;
         RemoteViews bigContentView = sbn.getNotification().bigContentView;

@@ -5123,11 +5123,10 @@ public final class Settings {
         public static final String DEFAULT_THEME_COMPONENTS = "default_theme_components";
 
         /**
-         * Whether the default theme was applied on the first boot.
+         * Protected Components
          * @hide
          */
-        public static final String DEFAULT_THEME_APPLIED_ON_FIRST_BOOT =
-                "default_theme_applied_on_first_boot";
+        public static final String PROTECTED_COMPONENTS = "protected_components";
 
         /**
          * This are the settings to be backed up.
