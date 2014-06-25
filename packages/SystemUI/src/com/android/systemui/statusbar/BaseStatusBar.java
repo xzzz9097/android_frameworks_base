@@ -24,6 +24,7 @@ import android.app.Notification;
 import android.app.PendingIntent;
 import android.app.TaskStackBuilder;
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
@@ -67,6 +68,7 @@ import android.view.ViewGroup;
 import android.view.ViewGroup.LayoutParams;
 import android.view.WindowManager;
 import android.view.WindowManagerGlobal;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -101,6 +103,7 @@ import com.android.systemui.statusbar.policy.NotificationRowLayout;
 import com.android.systemui.statusbar.SignalClusterView;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 
 import static com.android.systemui.statusbar.phone.QuickSettingsModel.IMMERSIVE_MODE_OFF;
@@ -127,8 +130,7 @@ public abstract class BaseStatusBar extends SystemUI implements
 
     protected static final boolean ENABLE_HEADS_UP = true;
     // scores above this threshold should be displayed in heads up mode.
-    protected static final int INTERRUPTION_THRESHOLD = 11;
-    protected static final String SETTING_HEADS_UP = "heads_up_enabled";
+    protected static final int INTERRUPTION_THRESHOLD = 1;
 
     // Should match the value in PhoneWindowManager
     public static final String SYSTEM_DIALOG_REASON_RECENT_APPS = "recentapps";
@@ -473,18 +475,23 @@ public abstract class BaseStatusBar extends SystemUI implements
         });
     }
 
+    public NotificationHelper getNotificationHelperInstance() {
+        if (mNotificationHelper == null) mNotificationHelper = new NotificationHelper(this, mContext);
+        return mNotificationHelper;
+    }
+
     public Hover getHoverInstance() {
-        if(mHover == null) mHover = new Hover(this, mContext);
+        if (mHover == null) mHover = new Hover(this, mContext);
         return mHover;
     }
 
     public Peek getPeekInstance() {
-        if(mPeek == null) mPeek = new Peek(this, mContext);
+        if (mPeek == null) mPeek = new Peek(this, mContext);
         return mPeek;
     }
 
     public PowerManager getPowerManagerInstance() {
-        if(mPowerManager == null) mPowerManager
+        if (mPowerManager == null) mPowerManager
                 = (PowerManager) mContext.getSystemService(Context.POWER_SERVICE);
         return mPowerManager;
     }
@@ -558,26 +565,30 @@ public abstract class BaseStatusBar extends SystemUI implements
 
     protected void updateClearAllRecents(boolean navBarHidden, boolean pieEnabled) {
 
+        // check if navbar is force shown
+        boolean forceNavbar = Settings.System.getInt(mContext.getContentResolver(),
+                    Settings.System.DEV_FORCE_SHOW_NAVBAR, 0) == 1;
         // check if device has hardware keys
         boolean hasKeys = false;
         try {
-                IWindowManager wm = WindowManagerGlobal.getWindowManagerService();
-                hasKeys = !wm.needsNavigationBar();
-            } catch (RemoteException e) {
-            }
-      if (!hasKeys) {
-        // use alternative clear all view/button?
-        Settings.System.putInt(mContext.getContentResolver(),
-                Settings.System.ALTERNATIVE_RECENTS_CLEAR_ALL,
-                        navBarHidden && pieEnabled ? SHOW_ALTERNATIVE_RECENTS_CLEAR_ALL
-                            : HIDE_ALTERNATIVE_RECENTS_CLEAR_ALL);
-      } else {
-        // use alternative clear all view/button?
-        Settings.System.putInt(mContext.getContentResolver(),
-                Settings.System.ALTERNATIVE_RECENTS_CLEAR_ALL,
-                         hasKeys || (navBarHidden && pieEnabled) ? SHOW_ALTERNATIVE_RECENTS_CLEAR_ALL
-                            : HIDE_ALTERNATIVE_RECENTS_CLEAR_ALL);
-      }
+            IWindowManager wm = WindowManagerGlobal.getWindowManagerService();
+            hasKeys = !wm.needsNavigationBar();
+        } catch (RemoteException e) {
+        }
+
+        if (!hasKeys) {
+            // use alternative clear all view/button?
+            Settings.System.putInt(mContext.getContentResolver(),
+                    Settings.System.ALTERNATIVE_RECENTS_CLEAR_ALL,
+                            navBarHidden && pieEnabled ? SHOW_ALTERNATIVE_RECENTS_CLEAR_ALL
+                                : HIDE_ALTERNATIVE_RECENTS_CLEAR_ALL);
+        } else {
+            // use alternative clear all view/button?
+            Settings.System.putInt(mContext.getContentResolver(),
+                    Settings.System.ALTERNATIVE_RECENTS_CLEAR_ALL,
+                            !forceNavbar ? SHOW_ALTERNATIVE_RECENTS_CLEAR_ALL
+                                : HIDE_ALTERNATIVE_RECENTS_CLEAR_ALL);
+        }
     }
 
     protected void updateHoverState() {
@@ -619,6 +630,12 @@ public abstract class BaseStatusBar extends SystemUI implements
             mLocale = locale;
             mLayoutDirection = ld;
             refreshLayout(ld);
+        }
+
+        int rotation = mDisplay.getRotation();
+        if (rotation != mOrientation) {
+            if (mPieController != null) mPieController.detachPie();
+            mOrientation = rotation;
         }
     }
 
@@ -961,6 +978,7 @@ public abstract class BaseStatusBar extends SystemUI implements
     }
 
     public abstract void resetHeadsUpDecayTimer();
+    public abstract void hideHeadsUp();
 
     protected class H extends Handler {
         public void handleMessage(Message m) {
@@ -1560,6 +1578,7 @@ public abstract class BaseStatusBar extends SystemUI implements
 
     protected boolean shouldInterrupt(StatusBarNotification sbn) {
         Notification notification = sbn.getNotification();
+
         // some predicates to make the boolean logic legible
         boolean isNoisy = (notification.defaults & Notification.DEFAULT_SOUND) != 0
                 || (notification.defaults & Notification.DEFAULT_VIBRATE) != 0
@@ -1569,20 +1588,69 @@ public abstract class BaseStatusBar extends SystemUI implements
         boolean isFullscreen = notification.fullScreenIntent != null;
         boolean isAllowed = notification.extras.getInt(Notification.EXTRA_AS_HEADS_UP,
                 Notification.HEADS_UP_ALLOWED) != Notification.HEADS_UP_NEVER;
+        boolean isOngoing = sbn.isOngoing();
 
         final KeyguardTouchDelegate keyguard = KeyguardTouchDelegate.getInstance(mContext);
+        boolean keyguardNotVisible = !keyguard.isShowingAndNotHidden()
+                && !keyguard.isInputRestricted();
+
+        final InputMethodManager inputMethodManager = (InputMethodManager)
+                mContext.getSystemService(Context.INPUT_METHOD_SERVICE);
+
+        boolean isIMEShowing = inputMethodManager.isImeShowing();
+
         boolean interrupt = (isFullscreen || (isHighPriority && isNoisy))
                 && isAllowed
-                && mPowerManager.isScreenOn()
-                && !keyguard.isShowingAndNotHidden()
-                && !keyguard.isInputRestricted();
+                && keyguardNotVisible
+                && !isOngoing
+                && !isIMEShowing
+                && mPowerManager.isScreenOn();
+
         try {
             interrupt = interrupt && !mDreamManager.isDreaming();
         } catch (RemoteException e) {
             Log.d(TAG, "failed to query dream manager", e);
         }
+
+        // its below our threshold priority, we might want to always display
+        // notifications from certain apps
+        if (!isHighPriority && keyguardNotVisible && !isOngoing && !isIMEShowing) {
+            // However, we don't want to interrupt if we're in an application that is
+            // in Do Not Disturb
+            if (!isPackageInDnd(getTopLevelPackage())) {
+                return true;
+            }
+        }
+
         if (DEBUG) Log.d(TAG, "interrupt: " + interrupt);
         return interrupt;
+    }
+
+    private String getTopLevelPackage() {
+        final ActivityManager am = (ActivityManager)
+                mContext.getSystemService(Context.ACTIVITY_SERVICE);
+        List<ActivityManager.RunningTaskInfo > taskInfo = am.getRunningTasks(1);
+        ComponentName componentInfo = taskInfo.get(0).topActivity;
+        return componentInfo.getPackageName();
+    }
+
+    private boolean isPackageInDnd(String packageName) {
+        final String baseString = Settings.System.getString(mContext.getContentResolver(),
+                Settings.System.HEADS_UP_CUSTOM_VALUES);
+
+        if (baseString != null) {
+            final String[] array = TextUtils.split(baseString, "\\|");
+            for (String item : array) {
+                if (TextUtils.isEmpty(item)) {
+                    continue;
+                }
+                if (TextUtils.equals(item, packageName)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     // Q: What kinds of notifications should show during setup?
