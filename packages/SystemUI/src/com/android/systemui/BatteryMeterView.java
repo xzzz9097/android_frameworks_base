@@ -208,13 +208,13 @@ public class BatteryMeterView extends View implements DemoMode {
         mBoltPoints = loadBoltPoints(res);
         setLayerType(View.LAYER_TYPE_SOFTWARE, null);
 
-        updateSettings();
+        updateSettings(false);
     }
 
     public void setColors(boolean qs) {
         Resources res = getResources();
         TypedArray levels = res.obtainTypedArray(R.array.batterymeter_color_levels);
-        TypedArray colors = res.obtainTypedArray(qs ? R.array.batterymeter_color_values :
+        TypedArray colors = res.obtainTypedArray(qs ? R.array.qs_batterymeter_color_values :
                                                       R.array.sb_batterymeter_color_values);
 
         final int N = levels.length();
@@ -227,9 +227,9 @@ public class BatteryMeterView extends View implements DemoMode {
         colors.recycle();
         mWarningTextPaint.setColor(mColors[1]);
         if (qs) {
-            mChargeColor = res.getColor(R.color.batterymeter_charge_color);
-            mBoltPaint.setColor(res.getColor(R.color.batterymeter_bolt_color));
-            mFramePaint.setColor(res.getColor(R.color.batterymeter_frame_color));
+            mChargeColor = res.getColor(R.color.qs_batterymeter_charge_color);
+            mBoltPaint.setColor(res.getColor(R.color.qs_batterymeter_bolt_color));
+            mFramePaint.setColor(res.getColor(R.color.qs_batterymeter_frame_color));
         } else {
             mChargeColor = res.getColor(R.color.sb_batterymeter_charge_color);
             mBoltPaint.setColor(res.getColor(R.color.sb_batterymeter_bolt_color));
@@ -270,12 +270,12 @@ public class BatteryMeterView extends View implements DemoMode {
         return color;
     }
 
-    public void updateSettings(){
+    public void updateSettings(final boolean qs) {
         int batteryStyle = Settings.System.getInt(getContext().getContentResolver(),
                                 Settings.System.STATUS_BAR_BATTERY_STYLE, 0);
 
-        mShowPercent = batteryStyle == 1;
-        boolean show = (batteryStyle == 0 || mShowPercent);
+        mShowPercent = batteryStyle == 1 || (qs && batteryStyle == 4);
+        boolean show = batteryStyle == 0 || mShowPercent;
 
         setVisibility(show ? View.VISIBLE : View.GONE);
         postInvalidate();
